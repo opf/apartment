@@ -36,6 +36,10 @@ module Apartment
       rescue ::ActiveRecord::NoDatabaseError
         # Since `db:create` and other tasks invoke this block from Rails 5.2.0,
         # we need to swallow the error to execute `db:create` properly.
+      rescue => e
+        # The behaviour above may have changed with the latest rails.
+        # So we also swallow this RuntimeError to make db creation work.
+        raise e unless ARGV.first == "db:create" && e.message.include?("nulldb_adapter")
       end
     end
 
