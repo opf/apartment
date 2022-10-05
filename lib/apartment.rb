@@ -4,6 +4,8 @@ require 'forwardable'
 require 'active_record'
 require 'apartment/tenant'
 
+require_relative './apartment/patches/active_record_migrator_patch'
+
 module Apartment
 
   class << self
