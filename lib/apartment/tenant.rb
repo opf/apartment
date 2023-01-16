@@ -8,7 +8,7 @@ module Apartment
     extend self
     extend Forwardable
 
-    def_delegators :adapter, :create, :drop, :switch, :switch!, :current, :each, :reset, :set_callback, :seed, :current_tenant, :default_tenant, :environmentify
+    def_delegators :adapter, :create, :drop, :switch, :switch!, :each, :reset, :set_callback, :seed, :current_tenant, :default_tenant, :environmentify
 
     attr_writer :config
 
@@ -16,6 +16,15 @@ module Apartment
     #
     def init
       adapter.process_excluded_models
+    end
+
+    def current
+      adapter.current
+    rescue => e
+      # this will happen when the db was just created in which case it is safe to ignore
+      raise e unless e.message.include?("nulldb_adapter")
+
+      nil
     end
 
     #   Fetch the proper multi-tenant adapter based on Rails config

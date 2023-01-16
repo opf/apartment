@@ -4,6 +4,8 @@ require 'forwardable'
 require 'active_record'
 require 'apartment/tenant'
 
+require_relative './apartment/patches/active_record_migrator_patch'
+
 module Apartment
 
   class << self
@@ -16,7 +18,15 @@ module Apartment
     attr_accessor(*ACCESSOR_METHODS)
     attr_writer(*WRITER_METHODS)
 
-    def_delegators :connection_class, :connection, :connection_config, :establish_connection
+    def_delegators :connection_class, :connection, :establish_connection
+
+    def connection_config
+      if ::ActiveRecord::Base.respond_to?(:connection_db_config)
+        ::ActiveRecord::Base.connection_db_config.configuration_hash
+      else
+        ::ActiveRecord::Base.connection_config
+      end
+    end
 
     # configure apartment with available options
     def configure
