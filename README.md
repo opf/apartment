@@ -1,7 +1,7 @@
 # Apartment
 
-[![Code Climate](https://codeclimate.com/github/influitive/apartment/badges/gpa.svg)](https://codeclimate.com/github/opf/apartment)
-[![Build Status](https://travis-ci.org/influitive/apartment.svg?branch=development)](https://travis-ci.org/opf/apartment)
+[![Gem Version](https://badge.fury.io/rb/ros-apartment.svg)](https://badge.fury.io/rb/ros-apartment)
+[![codecov](https://codecov.io/gh/rails-on-services/apartment/graph/badge.svg?token=Q4I5QL78SA)](https://codecov.io/gh/rails-on-services/apartment)
 
 *Multitenancy for Rails and ActiveRecord*
 
@@ -21,24 +21,15 @@ Use at your own risk.
 
 ## HELP!
 
-In order to help drive the direction of development and clean up the codebase, we'd like to take a poll
-on how people are currently using Apartment. If you can take 5 seconds (1 question) to answer
-this poll, we'd greatly appreciated it.
+This gem is a fork of the original Apartment gem, which is no longer maintained. We have continued development under the name `ros-apartment` to keep the gem up-to-date and compatible with the latest versions of Rails. `ros-apartment` is designed as a drop-in replacement for the original, allowing you to seamlessly transition your application without code changes.
 
-[View Poll](http://www.poll-maker.com/poll391552x4Bfb41a9-15)
+## Community Support
 
-## Excessive Memory Issues on ActiveRecord 4.x
+This project thrives on community support. Whether you have an idea for a new feature, find a bug, or need help with `ros-apartment`, we encourage you to participate! For questions and troubleshooting, check out our [Discussions board](https://github.com/rails-on-services/apartment/discussions) to connect with the community. You can also open issues or submit pull requests directly. We are committed to maintaining `ros-apartment` and ensuring it remains a valuable tool for Rails developers.
 
-> If you're noticing ever growing memory issues (ie growing with each tenant you add)
-> when using Apartment, that's because there's [an issue](https://github.com/rails/rails/issues/19578)
-> with how ActiveRecord maps Postgresql data types into AR data types.
-> This has been patched and will be released for AR 4.2.2. It's apparently hard
-> to backport to 4.1 unfortunately.
-> If you're noticing high memory usage from ActiveRecord with Apartment please upgrade.
+### Maintainer Update
 
-```ruby
-gem 'rails', '4.2.1', github: 'influitive/rails', tag: 'v4.2.1.memfix'
-```
+As of May 2024, Apartment is maintained with the support of [CampusESP](https://www.campusesp.com). We continue to keep Apartment open-source under the MIT license. We also want to recognize and thank the previous maintainers for their valuable contributions to this project.
 
 ## Installation
 
@@ -47,7 +38,7 @@ gem 'rails', '4.2.1', github: 'influitive/rails', tag: 'v4.2.1.memfix'
 Add the following to your Gemfile:
 
 ```ruby
-gem 'apartment'
+gem 'ros-apartment', require: 'apartment'
 ```
 
 Then generate your `Apartment` config file using
@@ -61,10 +52,6 @@ Configure as needed using the docs below.
 
 That's all you need to set up the Apartment libraries. If you want to switch tenants
 on a per-user basis, look under "Usage - Switching tenants per request", below.
-
-> NOTE: If using [postgresql schemas](http://www.postgresql.org/docs/9.0/static/ddl-schemas.html) you must use:
->
-> * for Rails 3.1.x: _Rails ~> 3.1.2_, it contains a [patch](https://github.com/rails/rails/pull/3232) that makes prepared statements work with multiple schemas
 
 ## Usage
 
@@ -82,7 +69,7 @@ you need to create a new tenant, you can run the following command:
 Apartment::Tenant.create('tenant_name')
 ```
 
-If you're using the [prepend environment](https://github.com/influitive/apartment#handling-environments) config option or you AREN'T using Postgresql Schemas, this will create a tenant in the following format: "#{environment}\_tenant_name".
+If you're using the [prepend environment](https://github.com/rails-on-services/apartment#handling-environments) config option or you AREN'T using Postgresql Schemas, this will create a tenant in the following format: "#{environment}\_tenant_name".
 In the case of a sqlite database, this will be created in your 'db/' folder. With
 other databases, the tenant will be created as a new DB within the system.
 
@@ -114,6 +101,16 @@ switched back at the end of the block to what it was before.
 
 There is also `switch!` which doesn't take a block, but it's recommended to use `switch`.
 To return to the default tenant, you can call `switch` with no arguments.
+
+#### Multiple Tenants
+
+When using schemas, you can also pass in a list of schemas if desired. Any tables defined in a schema earlier in the chain will be referenced first, so this is only useful if you have a schema with only some of the tables defined:
+
+```ruby
+Apartment::Tenant.switch(['tenant_1', 'tenant_2']) do
+  # ...
+end
+```
 
 ### Switching Tenants per request
 
@@ -243,7 +240,7 @@ A Generic Elevator exists that allows you to pass a `Proc` (or anything that res
 module MyApplication
   class Application < Rails::Application
     # Obviously not a contrived example
-    config.middleware.use Apartment::Elevators::Generic, Proc.new { |request| request.host.reverse }
+    config.middleware.use Apartment::Elevators::Generic, proc { |request| request.host.reverse }
   end
 end
 ```
@@ -279,7 +276,7 @@ In the examples above, we show the Apartment middleware being appended to the Ra
 Rails.application.config.middleware.use Apartment::Elevators::Subdomain
 ```
 
-By default, the Subdomain middleware switches into a Tenant based on the subdomain at the beginning of the request, and when the request is finished, it switches back to the "public" Tenant. This happens in the [Generic](https://github.com/influitive/apartment/blob/development/lib/apartment/elevators/generic.rb#L22) elevator, so all elevators that inherit from this elevator will operate as such.
+By default, the Subdomain middleware switches into a Tenant based on the subdomain at the beginning of the request, and when the request is finished, it switches back to the "public" Tenant. This happens in the [Generic](https://github.com/rails-on-services/apartment/blob/development/lib/apartment/elevators/generic.rb#L22) elevator, so all elevators that inherit from this elevator will operate as such.
 
 It's also good to note that Apartment switches back to the "public" tenant any time an error is raised in your application.
 
@@ -303,6 +300,27 @@ Apartment::Tenant.drop('tenant_name')
 
 When method is called, the schema is dropped and all data from itself will be lost. Be careful with this method.
 
+### Custom Prompt
+
+#### Console methods
+
+`ros-apartment` console configures two helper methods:
+1. `tenant_list` - list available tenants while using the console
+2. `st(tenant_name:String)` - Switches the context to the tenant name passed, if
+it exists.
+
+#### Custom printed prompt
+
+`ros-apartment` also has a custom prompt that gives a bit more information about
+the context in which you're running. It shows the environment as well as the tenant
+that is currently switched to. In order for you to enable this, you need to require
+the custom console in your application.
+
+In `application.rb` add `require 'apartment/custom_console'`.
+Please note that we rely on `pry-rails` to edit the prompt, thus your project needs
+to install it as well. In order to do so, you need to add `gem 'pry-rails'` to your
+project's gemfile.
+
 ## Config
 
 The following config options should be set up in a Rails initializer such as:
@@ -314,6 +332,37 @@ To set config options, add this to your initializer:
 ```ruby
 Apartment.configure do |config|
   # set your options (described below) here
+end
+```
+
+### Skip tenant schema check
+
+This is configurable by setting: `tenant_presence_check`. It defaults to true
+in order to maintain the original gem behavior. This is only checked when using one of the PostgreSQL adapters.
+The original gem behavior, when running `switch` would look for the existence of the schema before switching. This adds an extra query on every context switch. While in the default simple scenarios this is a valid check, in high volume platforms this adds some unnecessary overhead which can be detected in some other ways on the application level.
+
+Setting this configuration value to `false` will disable the schema presence check before trying to switch the context.
+
+```ruby
+Apartment.configure do |config|
+  config.tenant_presence_check = false
+end
+```
+
+### Additional logging information
+
+Enabling this configuration will output the database that the process is currently connected to as well as which
+schemas are in the search path. This can be enabled by setting to true the `active_record_log` configuration.
+
+Please note that our custom logger inherits from `ActiveRecord::LogSubscriber` so this will be required for the configuration to work.
+
+**Example log output:**
+
+<img src="documentation/images/log_example.png">
+
+```ruby
+Apartment.configure do |config|
+  config.active_record_log = true
 end
 ```
 
@@ -334,17 +383,30 @@ Rails will always access the 'public' tenant when accessing these models, but no
 
 ### Postgresql Schemas
 
-## Providing a Different default_schema
+#### Alternative: Creating new schemas by using raw SQL dumps
+
+Apartment can be forced to use raw SQL dumps insted of `schema.rb` for creating new schemas. Use this when you are using some extra features in postgres that can't be represented in `schema.rb`, like materialized views etc.
+
+This only applies while using postgres adapter and `config.use_schemas` is set to `true`.
+(Note: this option doesn't use `db/structure.sql`, it creates SQL dump by executing `pg_dump`)
+
+Enable this option with:
+
+```ruby
+config.use_sql = true
+```
+
+### Providing a Different default_tenant
 
 By default, ActiveRecord will use `"$user", public` as the default `schema_search_path`. This can be modified if you wish to use a different default schema be setting:
 
 ```ruby
-config.default_schema = "some_other_schema"
+config.default_tenant = "some_other_schema"
 ```
 
 With that set, all excluded models will use this schema as the table name prefix instead of `public` and `reset` on `Apartment::Tenant` will return to this schema as well.
 
-## Persistent Schemas
+### Persistent Schemas
 
 Apartment will normally just switch the `schema_search_path` whole hog to the one passed in. This can lead to problems if you want other schemas to always be searched as well. Enter `persistent_schemas`. You can configure a list of other schemas that will always remain in the search path, while the default gets swapped out:
 
@@ -412,7 +474,7 @@ schema_search_path: "public,shared_extensions"
 ...
 ```
 
-This would be for a config with `default_schema` set to `public` and `persistent_schemas` set to `['shared_extensions']`. **Note**: This only works on Heroku with [Rails 4.1+](https://devcenter.heroku.com/changelog-items/426). For apps that use older Rails versions hosted on Heroku, the only way to properly setup is to start with a fresh PostgreSQL instance:
+This would be for a config with `default_tenant` set to `public` and `persistent_schemas` set to `['shared_extensions']`. **Note**: This only works on Heroku with [Rails 4.1+](https://devcenter.heroku.com/changelog-items/426). For apps that use older Rails versions hosted on Heroku, the only way to properly setup is to start with a fresh PostgreSQL instance:
 
 1. Append `?schema_search_path=public,hstore` to your `DATABASE_URL` environment variable, by this you don't have to revise the `database.yml` file (which is impossible since Heroku regenerates a completely different and immutable `database.yml` of its own on each deploy)
 2. Run `heroku pg:psql` from your command line
@@ -450,18 +512,6 @@ schema in the `search_path` at all times. We won't be able to do this though unt
 also contain the tenanted tables, which is an open issue with no real milestone to be completed.
 Happy to accept PR's on the matter.
 
-#### Alternative: Creating new schemas by using raw SQL dumps
-
-Apartment can be forced to use raw SQL dumps insted of `schema.rb` for creating new schemas. Use this when you are using some extra features in postgres that can't be represented in `schema.rb`, like materialized views etc.
-
-This only applies while using postgres adapter and `config.use_schemas` is set to `true`.
-(Note: this option doesn't use `db/structure.sql`, it creates SQL dump by executing `pg_dump`)
-
-Enable this option with:
-```ruby
-config.use_sql = true
-```
-
 ### Managing Migrations
 
 In order to migrate all of your tenants (or postgresql schemas) you need to provide a list
@@ -482,7 +532,7 @@ You can then migrate your tenants using the normal rake task:
 rake db:migrate
 ```
 
-This just invokes `Apartment::Tenant.migrate(#{tenant_name})` for each tenant name supplied
+This just invokes `Apartment::Migrator.migrate(#{tenant_name})` for each tenant name supplied
 from `Apartment.tenant_names`
 
 Note that you can disable the default migrating of all tenants with `db:migrate` by setting
@@ -493,7 +543,7 @@ Note that you can disable the default migrating of all tenants with `db:migrate`
 
 Apartment supports parallelizing migrations into multiple threads when
 you have a large number of tenants. By default, parallel migrations is
-turned off. You can enable this by setting `parallel_migration_threads` to 
+turned off. You can enable this by setting `parallel_migration_threads` to
 the number of threads you want to use in your initializer.
 
 Keep in mind that because migrations are going to access the database,
@@ -540,7 +590,12 @@ end
 
 ## Background workers
 
-See [apartment-sidekiq](https://github.com/influitive/apartment-sidekiq) or [apartment-activejob](https://github.com/influitive/apartment-activejob).
+Both these gems have been forked as a side consequence of having a new gem name.
+You can use them exactly as you were using before. They are, just like this one
+a drop-in replacement.
+
+See [apartment-sidekiq](https://github.com/rails-on-services/apartment-sidekiq)
+or [apartment-activejob](https://github.com/rails-on-services/apartment-activejob).
 
 ## Callbacks
 
@@ -567,17 +622,60 @@ module Apartment
 end
 ```
 
-## Contributing
+## Running rails console without a connection to the database
 
-* In both `spec/dummy/config` and `spec/config`, you will see `database.yml.sample` files
-  * Copy them into the same directory but with the name `database.yml`
-  * Edit them to fit your own settings
-* Rake tasks (see the Rakefile) will help you setup your dbs necessary to run tests
-* Please issue pull requests to the `development` branch. All development happens here, master is used for releases.
-* Ensure that your code is accompanied with tests. No code will be merged without tests
+By default, once apartment starts, it establishes a connection to the database. It is possible to
+disable this initial connection, by running with `APARTMENT_DISABLE_INIT` set to something:
 
-* If you're looking to help, check out the TODO file for some upcoming changes I'd like to implement in Apartment.
+```shell
+$ APARTMENT_DISABLE_INIT=true DATABASE_URL=postgresql://localhost:1234/buk_development bin/rails runner 'puts 1'
+# 1
+```
+
+## Contribution Guidelines
+
+We welcome and appreciate contributions to `ros-apartment`! Whether you want to report a bug, propose a new feature, or submit a pull request, your help keeps this project thriving. Please review the guidelines below to ensure a smooth collaboration process.
+
+### How to Contribute
+
+1. **Check Existing Issues and Discussions**
+   - Before opening a new issue, please check the [issue tracker](https://github.com/rails-on-services/apartment/issues) and our [Discussions board](https://github.com/rails-on-services/apartment/discussions) to see if the topic has already been reported or discussed. This helps us avoid duplication and focus on solving the issue efficiently.
+
+2. **Submitting a Bug Report**
+   - Ensure your report includes a clear description of the problem, steps to reproduce, and relevant logs or error messages.
+   - If possible, provide a minimal reproducible example or a failing test case that demonstrates the issue.
+
+3. **Proposing a Feature**
+   - For new features, open an issue to discuss your idea before starting development. This allows the maintainers and community to provide feedback and ensure the feature aligns with the project's goals.
+   - Please be as detailed as possible when describing the feature, its use case, and its potential impact on the existing functionality.
+
+4. **Submitting a Pull Request**
+   - Fork the repository and create a feature branch (`git checkout -b my-feature-branch`).
+   - Follow the existing code style and ensure your changes are well-documented and tested.
+   - Run the tests locally to verify that your changes do not introduce new issues.
+   - Use [Appraisal](https://github.com/thoughtbot/appraisal) to test against multiple Rails versions. Ensure all tests pass for supported Rails versions.
+   - Submit your pull request to the `development` branch, not `main`.
+   - Include a detailed description of your changes and reference any related issue numbers (e.g., "Fixes #123" or "Closes #456").
+
+5. **Code Review and Merging Process**
+   - The maintainers will review your pull request and may provide feedback or request changes. We appreciate your patience during this process, as we strive to maintain a high standard for code quality.
+   - Once approved, your pull request will be merged into the `development` branch. Periodically, we merge the `development` branch into `main` for official releases.
+
+6. **Testing**
+   - Ensure your code is thoroughly tested. We do not merge code changes without adequate tests. Use RSpec for unit and integration tests.
+   - If your contribution affects multiple versions of Rails, use Appraisal to verify compatibility across versions.
+   - Rake tasks (see the Rakefile) are available to help set up your test databases and run tests.
+
+### Code of Conduct
+
+We are committed to providing a welcoming and inclusive environment for all contributors. Please review and adhere to our [Code of Conduct](CODE_OF_CONDUCT.md) when participating in the project.
+
+### Questions and Support
+
+If you have any questions or need support while contributing or using `ros-apartment`, visit our [Discussions board](https://github.com/rails-on-services/apartment/discussions) to ask questions and connect with the maintainer team and community.
+
+We look forward to your contributions and thank you for helping us keep `ros-apartment` a reliable and robust tool for the Rails community!
 
 ## License
 
-Apartment is released under the [MIT License](http://www.opensource.org/licenses/MIT).
+Apartment remains an open-source project under the [MIT License](http://www.opensource.org/licenses/MIT). We value open-source principles and aim to make multitenancy accessible to all Rails developers.

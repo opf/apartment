@@ -1,5 +1,6 @@
-migration_class = (ActiveRecord::VERSION::MAJOR >= 5) ?  ActiveRecord::Migration[4.2] : ActiveRecord::Migration
-class CreatePublicTokens < migration_class
+# frozen_string_literal: true
+
+class CreatePublicTokens < ActiveRecord::Migration[4.2]
   def up
     create_table :public_tokens do |t|
       t.string :token
