@@ -12,7 +12,9 @@ on:
 jobs:
   test:
     name: ${{ github.workflow }}, Ruby ${{ matrix.ruby_version }}, Rails ${{ matrix.rails_version }}
-    runs-on: ubuntu-latest
+    runs-on:
+      - runs-on=${{ github.run_id }}
+      - runner=2cpu-linux-x64
     strategy:
       fail-fast: false
       matrix:
