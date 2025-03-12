@@ -8,6 +8,7 @@ end
 Bundler.setup
 Bundler::GemHelper.install_tasks
 
+require 'logger'
 require 'appraisal'
 
 require 'rspec'
