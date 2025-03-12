@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require 'rubygems'
+require "logger" # Fix concurrent-ruby removing logger dependency which Rails itself does not have
+
 
 gemfile = File.expand_path('../../../Gemfile', __dir__)
 
